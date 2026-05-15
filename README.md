@@ -1,6 +1,8 @@
-# WordSearch Helper
+# WordSearch
 
 A comprehensive Python tool for finding valid dictionary words and processing matrix glyph maps for word games and puzzles. This tool filters an wordlist containing english words based on your specific requirements.
+
+Primary target : For solving glyphs of https://glyph.today/
 
 ## Features
 
