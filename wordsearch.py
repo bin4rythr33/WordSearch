@@ -209,6 +209,168 @@ def generate_combined_preview(h_arr, v_arr, s_arr, b_arr):
         print(compiled_line)
 
 
+def generate_preview_from_letters(letters, glyphs_map):
+    """Builds a composite 5x5 glyph from multiple alphabet letters and prints the preview.
+
+    Args:
+        letters: iterable or string of alphabet letters to combine (e.g., "ABC" or ["A","B"]).
+        glyphs_map: mapping returned by `load_dual_glyph_mapping()` containing stroke matrices.
+
+    Returns:
+        A tuple of four lists (horizontal, vertical, slash, backslash) each containing 5 string rows.
+    """
+    comp_h = [["0"] * 5 for _ in range(5)]
+    comp_v = [["0"] * 5 for _ in range(5)]
+    comp_s = [["0"] * 5 for _ in range(5)]
+    comp_b = [["0"] * 5 for _ in range(5)]
+
+    for ch in letters:
+        if not ch:
+            continue
+        ch = ch.upper()
+        if ch not in glyphs_map:
+            print(f"[WARN]: Letter '{ch}' not found in glyph map; skipping.")
+            continue
+
+        stroke = glyphs_map[ch]
+        for r in range(5):
+            for c in range(5):
+                if stroke["horizontal"][r][c] == "1":
+                    comp_h[r][c] = "1"
+                if stroke["vertical"][r][c] == "1":
+                    comp_v[r][c] = "1"
+                if stroke["slash"][r][c] == "1":
+                    comp_s[r][c] = "1"
+                if stroke["backslash"][r][c] == "1":
+                    comp_b[r][c] = "1"
+
+    h_rows = ["".join(row) for row in comp_h]
+    v_rows = ["".join(row) for row in comp_v]
+    s_rows = ["".join(row) for row in comp_s]
+    b_rows = ["".join(row) for row in comp_b]
+
+    generate_combined_preview(h_rows, v_rows, s_rows, b_rows)
+
+    return h_rows, v_rows, s_rows, b_rows
+
+
+def compare_composite_outputs(a, b):
+    """Compare two composite glyph outputs and return True if they match exactly.
+
+    Args:
+        a, b: Each should be an iterable/tuple of four matrices in the order
+              (horizontal, vertical, slash, backslash). Each matrix may be
+              a list of 5 strings (e.g. '01010') or a list of 5 lists of '0'/'1'.
+
+    Returns:
+        True if all four matrices match exactly row-for-row, False otherwise.
+    """
+    def _normalize(mat):
+        if mat is None or not isinstance(mat, (list, tuple)):
+            return None
+        rows = []
+        for row in mat:
+            if isinstance(row, str):
+                rows.append(row)
+            else:
+                rows.append("".join(str(c) for c in row))
+        return rows
+
+    if not (isinstance(a, (list, tuple)) and isinstance(b, (list, tuple))):
+        return False
+    if len(a) != 4 or len(b) != 4:
+        return False
+
+    for i in range(4):
+        ma = _normalize(a[i])
+        mb = _normalize(b[i])
+        if ma is None or mb is None:
+            return False
+        if len(ma) != 5 or len(mb) != 5:
+            return False
+        for r in range(5):
+            if ma[r] != mb[r]:
+                return False
+
+    return True
+
+
+def build_composite_from_letters(letters, glyphs_map):
+    """Build composite 5x5 stroke matrices from given letters (no preview).
+
+    Args:
+        letters: iterable or string of letters.
+        glyphs_map: mapping from `load_dual_glyph_mapping()`.
+
+    Returns:
+        Tuple of four lists: (horizontal_rows, vertical_rows, slash_rows, backslash_rows)
+    """
+    comp_h = [["0"] * 5 for _ in range(5)]
+    comp_v = [["0"] * 5 for _ in range(5)]
+    comp_s = [["0"] * 5 for _ in range(5)]
+    comp_b = [["0"] * 5 for _ in range(5)]
+
+    for ch in letters:
+        if not ch:
+            continue
+        ch = ch.upper()
+        if ch not in glyphs_map:
+            continue
+        stroke = glyphs_map[ch]
+        for r in range(5):
+            for c in range(5):
+                if stroke["horizontal"][r][c] == "1":
+                    comp_h[r][c] = "1"
+                if stroke["vertical"][r][c] == "1":
+                    comp_v[r][c] = "1"
+                if stroke["slash"][r][c] == "1":
+                    comp_s[r][c] = "1"
+                if stroke["backslash"][r][c] == "1":
+                    comp_b[r][c] = "1"
+
+    h_rows = ["".join(row) for row in comp_h]
+    v_rows = ["".join(row) for row in comp_v]
+    s_rows = ["".join(row) for row in comp_s]
+    b_rows = ["".join(row) for row in comp_b]
+
+    return h_rows, v_rows, s_rows, b_rows
+
+
+def find_words_matching_input_glyph(possible_words, input_glyph, glyphs_map=None):
+    """Return list of words whose composite glyph equals `input_glyph` exactly.
+
+    Args:
+        possible_words: iterable of words (strings) to test.
+        input_glyph: four matrices [horizontal, vertical, slash, backslash], each list of 5 strings.
+        glyphs_map: optional glyph mapping; if None it will be loaded.
+
+    Returns:
+        List of words from `possible_words` whose built composite matches `input_glyph`.
+    """
+    if glyphs_map is None:
+        glyphs_map = load_dual_glyph_mapping()
+
+    matches = []
+    # Normalize input_glyph into same shape expected by compare_composite_outputs
+    target = input_glyph
+
+    for w in possible_words:
+        comp = build_composite_from_letters(w, glyphs_map)
+        if compare_composite_outputs(comp, target):
+            matches.append(w)
+
+    return matches
+
+
+def save_glyph_output(results, filename="glyph.output.txt"):
+    """Save a word list to a file in the current script directory and return the file path."""
+    output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(results))
+        if results:
+            f.write("\n")
+    return output_path
+
 # Alphabet character Checker
 def get_valid_alpha_input(prompt_message):
     """Prompt user for optional alphabetic input, rejecting non-alphabets and converting to uppercase."""
@@ -340,6 +502,8 @@ def run_glyph_mode():
     
     # Step 3: Print visual composite layout
     generate_combined_preview(user_h, user_v, user_s, user_b)
+
+    input_glyph = [user_h, user_v, user_s, user_b]
     
     # Step 4: Discover all alphabet sub-components hidden in the composite array
     possible_letters = []
@@ -358,22 +522,36 @@ def run_glyph_mode():
     print(f"Possible letters found hidden inside input glyph: {', '.join(sorted(possible_letters))}")
     
     # Step 5: Request for user inputs for optional constraints
+    contains = get_valid_alpha_input("Enter letters that MUST exist in the word (or press enter to skip): ")
     excludes = get_valid_alpha_input("Enter letters that MUST NOT exist in the word (or press enter to skip): ")
     starts_with = get_valid_alpha_input("Enter the known starting letter (or press enter to skip): ")
     ends_with = get_valid_alpha_input("Enter the known ending letter (or press enter to skip): ")
     
     # Step 6: Use common function to filter and get results
-    results = filter_words_by_constraints(
+    possible_words = filter_words_by_constraints(
         word_length=word_length,
         possible_letters=possible_letters,
-        contains="",
+        contains=contains,
         excludes=excludes,
         starts_with=starts_with,
         ends_with=ends_with
     )
-    
-    # Step 7: Display results
-    display_word_results(results)
+
+    results = find_words_matching_input_glyph(
+        possible_words=possible_words,
+        input_glyph=input_glyph,
+        glyphs_map=glyphs
+    )
+
+    if results:
+        output_path = save_glyph_output(results)
+        print(f"\nExact glyph matches saved to: {output_path}")
+        display_word_results(results)
+    else:
+        output_path = save_glyph_output(possible_words)
+        print("\n[NOTICE]: No exact glyph match word found. Outputting fallback possible words instead.")
+        print(f"Possible words saved to: {output_path}")
+        display_word_results(possible_words)
 
 def main():
     if "-h" in sys.argv or "--help" in sys.argv:
