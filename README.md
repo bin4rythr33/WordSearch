@@ -17,6 +17,8 @@ Primary target : For solving glyphs of https://glyph.today/
   - Read composite multi-letter glyph arrays from a file
   - Automatically extract all possible constituent letters
   - Find matching dictionary words using discovered letters
+-  - Filter to exact glyph matches when possible
+-  - Save output to `glyph.output.txt`; if no exact glyph match exists, save fallback possible words
   - Apply additional constraints (excludes, starts with, ends with)
 
 - **Fast Offline Search**: Uses a pre-loaded dictionary for instant lookups
@@ -81,7 +83,9 @@ Glyph Mode reads visual glyph matrices from `glyph_input.txt` and discovers whic
 1. Create a `glyph_input.txt` file with the target word length and 4 composite 5x5 matrices (separated by `-----`)
 2. Create a `glyphs_map.txt` file defining the 5x5 stroke patterns for each letter
 3. Run the program and select Glyph Mode
-4. Apply additional filters as needed
+4. Exact glyph matches are displayed and written to `glyph.output.txt`
+  - If no exact glyph match exists, filtered possible words are saved instead
+5. Apply additional filters as needed
 
 #### Example `glyphs_map.txt` format:
 
@@ -166,6 +170,8 @@ WordSearch/
    - Checks if its stroke pattern is contained within the composite input
    - If all strokes match, adds the letter to the possible pool
 4. Filters dictionary using possible letters and additional constraints
+5. Verifies candidate words by generating composite glyphs and only returning exact glyph matches
+6. Saves results to `glyph.output.txt`; if no exact matches exist, saves fallback possible words instead
 5. Returns matching words in alphabetical order
 
 ## Examples
